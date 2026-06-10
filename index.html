@@ -1,12 +1,3 @@
-The reason the volume bar isn't working on your phone is a strict, built-in security limitation in mobile operating systems (iOS and Android).
-
-On mobile devices, the browser layer **completely ignores** JavaScript volume properties (`audio.volume = ...`) to prevent websites from accidentally blasting audio or draining the user's battery. Apple and Google force the user to use the physical volume buttons on the side of the hardware.
-
-Since we cannot bypass the physical hardware restriction, the industry standard fix is to build a **Gain Node Web Audio Engine**. By routing your audio tracking into a custom browser synthesizer node, we can amplify or reduce the digital signal *before* it leaves the app, which overrides the hardware block.
-
-Here is your updated, fully functioning code with the mobile volume patch integrated.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -649,5 +640,3 @@ Here is your updated, fully functioning code with the mobile volume patch integr
     </script>
 </body>
 </html>
-
-```
