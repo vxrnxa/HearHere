@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Façade Experience UI - Live Prototype</title>
+    <title>HearHere- Live Prototype</title>
     <style>
         :root {
             --bg-page: #010118;
@@ -334,19 +334,46 @@
             states[newState].classList.add('active');
         }
 
-        // ROLE SWITCHING MECHANISM
-        function switchSystemRole(role) {
+        // SECURE ROLE SWITCHING MECHANISM
+        async function switchSystemRole(role) {
             const audBtn = document.getElementById('btnViewAudience');
             const creBtn = document.getElementById('btnViewCreator');
             const creatorScreen = document.getElementById('state-creator');
             const indicatorText = document.getElementById('roleContextIndicator');
-
+        
             if (role === 'creator') {
+                // 1. Prompt for Username
+                const username = prompt("Enter Administrator Username:");
+                if (username !== "hbk.saar") {
+                    alert("Access Denied: Invalid Administrative Identity.");
+                    return;
+                }
+        
+                // 2. Prompt for Password
+                const password = prompt("Enter Administrative Password:");
+                if (!password) return;
+        
+                // 3. Hash the input to compare securely
+                // The hash below corresponds to the password: "FacadeLive2026!"
+                const msgUint8 = new TextEncoder().encode(password);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+                const targetHash = "b7235a5ea1fe470efca099e289bf4494a37bd37a0d84a7e7216a6986422bfae6";
+        
+                if (passwordHash !== targetHash) {
+                    alert("Access Denied: Security Signature Mismatch.");
+                    return;
+                }
+        
+                // Access Granted
                 audBtn.classList.remove('active');
                 creBtn.classList.add('active');
                 creatorScreen.classList.add('active');
                 indicatorText.textContent = "CMS / Upload Node";
             } else {
+                // Switching back to audience view doesn't require verification
                 creBtn.classList.remove('active');
                 audBtn.classList.add('active');
                 creatorScreen.classList.remove('active');
