@@ -126,9 +126,6 @@
         .progress-bar-container { width: 100%; height: 6px; background: rgba(100, 116, 139, 0.2); border-radius: 3px; overflow: hidden; margin-top: 2rem; }
         #syncProgress { width: 0%; height: 100%; background: var(--btn-cyan); transition: width 0.1s linear; }
 
-        /* ==========================================
-           NATIVE CSS WAVEFORM SYSTEM
-           ========================================== */
         .visual-waveform { 
             width: 160px;
             height: 65px;
@@ -147,7 +144,6 @@
             transform-origin: bottom;
             transition: transform 0.2s ease;
         }
-        /* Active State Driving the Animation Loop */
         .visual-waveform.playing .bar {
             animation: bounce 0.8s ease-in-out infinite alternate;
         }
@@ -166,13 +162,11 @@
         #playBtn { font-size: 2.5rem; color: var(--text-main); background: none; border: none; cursor: pointer; margin: 1rem 0; }
         #playBtn:focus { outline: none; }
     
-        /* Volume Control */
         .slider-container { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-top: 1rem; color: var(--text-dim); }
         .slider-row { display: flex; width: 100%; align-items: center; gap: 1rem; }
         .slider-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; }
         input[type="range"] { width: 100%; accent-color: var(--accent-green); cursor: pointer; }
 
-        /* Hardware Nudge Buttons */
         .nudge-controls { 
             display: flex; 
             align-items: center; 
@@ -222,6 +216,8 @@
         .form-group label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.5rem; font-weight: bold; }
         .form-group input[type="text"] { background: #1e293b; border: 1px solid var(--text-dimmer); padding: 0.75rem; border-radius: 8px; color: #fff; font-size: 0.9rem; }
         .file-upload-wrapper { background: #1e293b; border: 2px dashed var(--text-dimmer); border-radius: 10px; padding: 1.5rem; text-align: center; cursor: pointer; position: relative; }
+        
+        /* FIXED FILE ACCEPTS CAPABILITIES */
         .file-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
         .upload-msg { font-size: 0.85rem; color: var(--text-dim); }
         .upload-status-badge { font-size: 0.75rem; font-family: monospace; color: var(--accent-green); margin-top: 0.5rem; display: none; }
@@ -312,20 +308,22 @@
                     
                     <div class="form-group">
                         <label>Track Identification Label</label>
-                        <input type="text" id="creatorTrackTitle" value="Labisi - Ife">
+                        <input type="text" id="creatorTrackTitle" value="Labisi - Ife" oninput="pushTextTitleUpdate(this.value)">
                     </div>
 
                     <div class="form-group">
-                        <label>Audio Source File Allocation</label>
+                        <label>Source File Allocation (Audio, Video, or Images)</label>
                         <div class="file-upload-wrapper">
-                            <div class="upload-msg">📂 Drop track here or tap to choose file</div>
-                            <input type="file" id="creatorAudioSelector" accept="audio/*" onchange="processLocalCreatorTrack(event)">
-                            <div class="upload-status-badge" id="uploadStatusLabel">Asset staged locally.</div>
+                            <div class="upload-msg">📂 Drop media file here or tap to choose</div>
+                            
+                            <input type="file" id="creatorAudioSelector" accept="audio/*,video/*,image/*" onchange="processLocalCreatorTrack(event)">
+                            
+                            <div class="upload-status-badge" id="uploadStatusLabel">Asset broadcast active.</div>
                         </div>
                     </div>
 
                     <p class="sub-text" style="line-height: 1.4; color: var(--text-dim);">
-                        <strong>Sync Reference Warning:</strong> The server calculations tie runtime offsets to universal UTC midnight cycles. Ensure your media facade server loops are synchronized with the same standard.
+                        <strong>Global Sync Active:</strong> Modifying fields or dropping tracking tracks here overwrites local cluster indexes. Changes will update immediately on all open windows.
                     </p>
                 </div>
             </main>
@@ -334,12 +332,19 @@
 
     <script>
         const audio = new Audio();
-        audio.volume = 0.8;
+        audio.crossOrigin = "anonymous"; 
+        
+        let audioCtx = null;
+        let gainNode = null;
+        let audioSourceConnected = false;
         
         let serverOffset = 0;
         let isCalibrated = false;
         let manualNudge = 0; 
-        let currentRuntimeTrackName = "Labisi - Ife";
+
+        // Active tracked state tracking parameters
+        let activeServerTrackTitle = "Labisi - Ife";
+        let activeServerAudioData = "https://files.cvaultx.com/wp-content/uploads/music/2024/11/Labisi_-_Ife_CeeNaija.com_.mp3";
 
         let timeIntervalInstance = null;
         let progressIntervalInstance = null;
@@ -363,6 +368,28 @@
         const nudgeBtns = document.querySelectorAll('.nudge-btn');
         const waveformContainer = document.getElementById('waveformContainer');
 
+        // Initialises backend simulation tables
+        if(!localStorage.getItem('hh_sync_title')) {
+            localStorage.setItem('hh_sync_title', activeServerTrackTitle);
+            localStorage.setItem('hh_sync_audio', activeServerAudioData);
+        }
+
+        function initWebAudioAPI() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                gainNode = audioCtx.createGain();
+                gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                
+                const source = audioCtx.createMediaElementSource(audio);
+                source.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                audioSourceConnected = true;
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
         function setUIState(newState) {
             Object.values(states).forEach(state => state.classList.remove('active'));
             states[newState].classList.add('active');
@@ -380,15 +407,12 @@
                     alert("Access Denied: Invalid Administrative Identity.");
                     return;
                 }
-        
                 const password = prompt("Enter Administrative Password:");
                 if (!password) return;
-        
                 if (password !== "FacadeLive2026!") {
                     alert("Access Denied: Security Signature Mismatch.");
                     return;
                 }
-        
                 audBtn.classList.remove('active');
                 creBtn.classList.add('active');
                 creatorScreen.classList.add('active');
@@ -401,23 +425,54 @@
             }
         }
 
+        // CREATOR BROADCAST SYSTEM ENGINE: Packages files to simulate real-time distribution
         function processLocalCreatorTrack(event) {
             const file = event.target.files[0];
             const badge = document.getElementById('uploadStatusLabel');
             if (!file) return;
 
-            const trackBlobUrl = URL.createObjectURL(file);
-            audio.src = trackBlobUrl;
-
-            currentRuntimeTrackName = document.getElementById('creatorTrackTitle').value || file.name;
-            
-            badge.textContent = `✔ Active Source: ${file.name}`;
-            badge.style.display = "block";
-
-            audio.pause();
-            if(waveformContainer) waveformContainer.classList.remove('playing');
-            playBtn.textContent = '▶️';
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Data = e.target.result;
+                const trackName = document.getElementById('creatorTrackTitle').value || file.name;
+                
+                // Write directly to shared browser storage row
+                localStorage.setItem('hh_sync_title', trackName);
+                localStorage.setItem('hh_sync_audio', base64Data);
+                
+                badge.textContent = `✔ Broadcast Active: ${file.name}`;
+                badge.style.display = "block";
+            };
+            reader.readAsDataURL(file); 
         }
+
+        function pushTextTitleUpdate(val) {
+            localStorage.setItem('hh_sync_title', val);
+        }
+
+        // CRITICAL SYNC CORE: Constantly monitors the simulated network database for global changes
+        setInterval(() => {
+            const currentGlobalTitle = localStorage.getItem('hh_sync_title');
+            const currentGlobalAudio = localStorage.getItem('hh_sync_audio');
+
+            if (currentGlobalTitle !== activeServerTrackTitle || currentGlobalAudio !== activeServerAudioData) {
+                activeServerTrackTitle = currentGlobalTitle;
+                activeServerAudioData = currentGlobalAudio;
+
+                console.log("Global update intercepted! Syncing active data profiles...");
+                
+                // Dynamically swaps track profiles inside real-time engines
+                const isPlayingBeforeSwap = !audio.paused;
+                audio.src = activeServerAudioData;
+                trackNameDisplay.innerHTML = `${activeServerTrackTitle}<br> Watch the projection.`;
+
+                if (isPlayingBeforeSwap) {
+                    audio.addEventListener('loadedmetadata', () => {
+                        startSyncedPlayback();
+                    }, { once: true });
+                }
+            }
+        }, 1000); // Scans track profiles once every second
 
         async function calibrateWithServer() {
             let bestOffset = 0;
@@ -430,7 +485,6 @@
                     const response = await fetch(`https://worldtimeapi.org/api/timezone/Etc/UTC?nocache=${Math.random()}`);
                     const data = await response.json();
                     const end = performance.now();
-                    
                     const rtt = end - start; 
                     
                     if (rtt < lowestLatency) {
@@ -440,14 +494,10 @@
                         bestOffset = serverMs - (Date.now() - networkDelay);
                     }
                 }
-                
                 serverOffset = bestOffset;
                 isCalibrated = true;
                 latencyDisplay.textContent = `-${Math.round(lowestLatency / 2)}ms`;
-                console.log(`Sync calibrated. Server Offset: ${serverOffset}ms`);
-                
             } catch (e) {
-                console.error("Sync failed.", e);
                 latencyDisplay.textContent = `Fallback`;
             }
         }
@@ -462,17 +512,19 @@
             
             const msElapsedToday = exactNow - midnight.getTime();
             const durationMs = durationSeconds * 1000;
-            
             return (msElapsedToday % durationMs) / 1000;
         }
 
         const startDemoBtn = document.getElementById('startDemoBtn');
 
         startDemoBtn.addEventListener('click', function() {
-            if (!audio.src) {
-                audio.src = "https://files.cvaultx.com/wp-content/uploads/music/2024/11/Labisi_-_Ife_CeeNaija.com_.mp3"; 
-            }
-    
+            initWebAudioAPI();
+
+            // Pull current track profile parameters
+            activeServerTrackTitle = localStorage.getItem('hh_sync_title');
+            activeServerAudioData = localStorage.getItem('hh_sync_audio');
+            audio.src = activeServerAudioData;
+
             audio.muted = true;
             audio.play().then(() => {
                 audio.pause();
@@ -480,12 +532,12 @@
             }).catch(err => console.log("Audio unlock failed:", err));
 
             setUIState('syncing');
-            simulateSyncProcess(currentRuntimeTrackName);
+            simulateSyncProcess(activeServerTrackTitle);
         });
 
         function triggerManualResync() {
             calibrateWithServer();
-            simulateSyncProcess(currentRuntimeTrackName);
+            simulateSyncProcess(activeServerTrackTitle);
         }
 
         function simulateSyncProcess(trackName) {
@@ -526,7 +578,7 @@
 
             setTimeout(() => {
                 setUIState('playback');
-                trackNameDisplay.innerHTML = `${trackName}<br> Watch the projection.`;
+                trackNameDisplay.innerHTML = `${activeServerTrackTitle}<br> Watch the projection.`;
                 
                 if (!isNaN(audio.duration) && audio.duration > 0) {
                     audio.currentTime = getPerfectSyncTime(audio.duration);
@@ -539,16 +591,17 @@
         }
 
         function startSyncedPlayback() {
+            initWebAudioAPI();
             const jumpTo = getPerfectSyncTime(audio.duration);
             audio.currentTime = jumpTo;
             audio.play().catch(e => console.log("Playback blocked:", e));
             
-            // Add native bounce style classes to visual container
             if(waveformContainer) waveformContainer.classList.add('playing');
             playBtn.textContent = '⏸️';
         }
 
         playBtn.addEventListener('click', () => {
+            initWebAudioAPI(); 
             if (audio.paused) {
                 startSyncedPlayback();
             } else {
@@ -563,7 +616,11 @@
         });
 
         volumeBar.addEventListener('input', () => {
-            audio.volume = volumeBar.value / 100;
+            const volumeValue = volumeBar.value / 100;
+            audio.volume = volumeValue;
+            if (gainNode && audioCtx) {
+                gainNode.gain.setValueAtTime(volumeValue, audioCtx.currentTime);
+            }
         });
 
         let nudgeTimeout; 
@@ -572,12 +629,10 @@
             btn.addEventListener('click', () => {
                 const change = parseInt(btn.getAttribute('data-val'));
                 manualNudge += change;
-                
                 nudgeDisplay.textContent = `${manualNudge > 0 ? '+' : ''}${manualNudge}ms`;
 
                 if (!audio.paused && !isNaN(audio.duration) && audio.duration > 0) {
                     clearTimeout(nudgeTimeout); 
-                    
                     const targetTime = getPerfectSyncTime(audio.duration);
                     let diff = targetTime - audio.currentTime;
 
@@ -598,7 +653,7 @@
                             nudgeTimeout = setTimeout(() => { audio.playbackRate = 1.0; }, bendDurationMs);
                         }
                     } catch (err) {
-                        console.warn("Playback rate adjustment rejected by browser engine:", err);
+                        console.warn("Playback engine feedback warning:", err);
                     }
                 }
             });
