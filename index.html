@@ -360,7 +360,7 @@
                 const hashArray = Array.from(new Uint8Array(hashBuffer));
                 const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         
-                const targetHash = "b7235a5ea1fe470efca099e289bf4494a37bd37a0d84a7e7216a6986422bfae6";
+                const targetHash = "ba90ec4401cbb3fb051d91f16da081a3e6488d75437885b52a4ef99538a7c268";
         
                 if (passwordHash !== targetHash) {
                     alert("Access Denied: Security Signature Mismatch.");
