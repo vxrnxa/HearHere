@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,6 +15,7 @@
             --accent-latency: #ff007f; 
             --btn-pink: #c084fc;
             --btn-cyan: #22d3ee;
+            --creator-bg: #0f172a;
         }
 
         body {
@@ -23,18 +23,53 @@
             background-color: var(--bg-page);
             color: var(--text-main);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
-            overflow: hidden;
+            overflow-x: hidden;
+        }
+
+        /* Mode Switcher for the Creator Panel */
+        .mode-toggle-bar {
+            margin-bottom: 10px;
+            z-index: 10;
+        }
+        .mode-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--text-dimmer);
+            color: var(--text-dim);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background: var(--btn-pink);
+            color: #000;
+            border-color: var(--btn-pink);
+            font-weight: bold;
+        }
+
+        .wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .phone-mockup {
             background-color: var(--bg-phone);
             width: 100%;
-            max-width: 380px;
-            height: calc(100vh - 40px);
+            height: calc(100vh - 80px);
+            min-height: 580px;
+            max-height: 720px;
             border-radius: 40px;
             box-shadow: 0 0 50px rgba(6, 182, 212, 0.2);
             overflow: hidden;
@@ -56,6 +91,7 @@
             align-items: center;
             justify-content: space-evenly;
             text-align: center;
+            position: relative;
         }
 
         .state {
@@ -134,92 +170,133 @@
             text-align: center;
         }
 
+        /* ==========================================
+           CREATOR PANEL STYLING
+           ========================================== */
+        #state-creator {
+            background-color: var(--creator-bg);
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            padding: 2rem;
+            box-sizing: border-box;
+            display: none;
+            flex-direction: column;
+            justify-content: flex-start;
+            text-align: left;
+            overflow-y: auto;
+        }
+        #state-creator.active { display: flex; }
+        .creator-section-title { font-size: 1.2rem; color: var(--btn-cyan); text-transform: uppercase; font-weight: bold; margin-bottom: 1.5rem; border-bottom: 1px solid #1e293b; padding-bottom: 0.5rem; }
+        .form-group { width: 100%; margin-bottom: 1.2rem; display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.5rem; font-weight: bold; }
+        .form-group input[type="text"] { background: #1e293b; border: 1px solid var(--text-dimmer); padding: 0.75rem; border-radius: 8px; color: #fff; font-size: 0.9rem; }
+        .file-upload-wrapper { background: #1e293b; border: 2px dashed var(--text-dimmer); border-radius: 10px; padding: 1.5rem; text-align: center; cursor: pointer; position: relative; }
+        .file-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .upload-msg { font-size: 0.85rem; color: var(--text-dim); }
+        .upload-status-badge { font-size: 0.75rem; font-family: monospace; color: var(--accent-green); margin-top: 0.5rem; display: none; }
+
     </style>
 </head>
 <body>
 
-    <div class="phone-mockup">
-        <header>
-            <h1 class="main-title">Façade Experience UI</h1>
-            <div class="experience-header">
-                <span class="circle-icon"></span>
-                <span>Experience Journey</span>
-            </div>
-        </header>
+    <div class="mode-toggle-bar">
+        <button class="mode-btn active" id="btnViewAudience" onclick="switchSystemRole('audience')">Audience App</button>
+        <button class="mode-btn" id="btnViewCreator" onclick="switchSystemRole('creator')">Creator CMS</button>
+    </div>
 
-        <main>
-            <div class="state active" id="state-landing">
-                <div style="font-size: 5rem; color: var(--btn-cyan); opacity: 0.4;">...<span style="font-size: 0.7em;">→</span></div>
+    <div class="wrapper">
+        <div class="phone-mockup">
+            <header>
+                <h1 class="main-title">Façade Experience UI</h1>
+                <div class="experience-header">
+                    <span class="circle-icon"></span>
+                    <span id="roleContextIndicator">Experience Journey</span>
+                </div>
+            </header>
 
-                <button id="startDemoBtn" class="btn btn-sync">Tap to Listen</button>
-
-                <p class="text-description">"'Tap to Listen' button unlocks audio and syncs with server clock."</p>
-                <p class="sub-text">Scan complete. Connect state.</p>
-                
-                <div class="hand-graphic">👉</div>
-            </div>
-
-            <div class="state" id="state-syncing">
-                <button class="btn btn-sync" id="syncStatusBtn">Syncing...</button>
-
-                <div class="visual-sphere">
-                    <span style="opacity: 0.5;">🌐</span>
-                    <div class="timestamp" id="syncTime">00:00:00.000</div>
+            <main>
+                <div class="state active" id="state-landing">
+                    <div style="font-size: 5rem; color: var(--btn-cyan); opacity: 0.4;">...<span style="font-size: 0.7em;">→</span></div>
+                    <button id="startDemoBtn" class="btn btn-sync">Tap to Listen</button>
+                    <p class="text-description">"'Tap to Listen' button unlocks audio and syncs with server clock."</p>
+                    <p class="sub-text">Scan complete. Connect state.</p>
+                    <div class="hand-graphic">👉</div>
                 </div>
 
-                <p class="sync-label" id="loadingStatusText">Syncing to Server Clock...</p>
-                
-                <button class="resync-btn" onclick="calibrateWithServer()">Resync</button>
-
-                <div class="sync-data">
-                    <span class="data-label">Latency: <span id="latencyDisplay" style="color:var(--accent-green);">Calculating...</span></span>
-                    <span class="data-value" id="finalSyncLabel"></span>
-                </div>
-
-                <div class="progress-bar-container">
-                    <div id="syncProgress"></div>
-                </div>
-            </div>
-
-            <div class="state" id="state-playback">
-                <div class="active-label">
-                    <span style="color:var(--text-main); font-weight:700;">ACTIVE.</span><br>
-                    Listen in Perfect Sync.
-                </div>
-
-                <div class="visual-waveform">📊</div>
-                
-                <button id="playBtn">▶️</button>
-
-                <p class="text-description" id="trackNameDisplay">Audio plays in perfect sync<br>with the façade visuals.</p>
-                
-                <div class="slider-container">
-                    <div class="slider-row">
-                        <span>🔈</span>
-                        <input type="range" id="volumeBar" min="0" max="100" value="80">
-                        <span>🔊</span>
+                <div class="state" id="state-syncing">
+                    <button class="btn btn-sync" id="syncStatusBtn">Syncing...</button>
+                    <div class="visual-sphere">
+                        <span style="opacity: 0.5;">🌐</span>
+                        <div class="timestamp" id="syncTime">00:00:00.000</div>
+                    </div>
+                    <p class="sync-label" id="loadingStatusText">Syncing to Server Clock...</p>
+                    <button class="resync-btn" onclick="calibrateWithServer()">Resync</button>
+                    <div class="sync-data">
+                        <span class="data-label">Latency: <span id="latencyDisplay" style="color:var(--accent-green);">Calculating...</span></span>
+                        <span class="data-value" id="finalSyncLabel"></span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="syncProgress"></div>
                     </div>
                 </div>
 
-                <div class="slider-container" style="margin-top: 1.5rem;">
-                    <div class="slider-label">Hardware Nudge</div>
-                    <div class="nudge-controls">
-                        <button class="nudge-btn" data-val="-100">-100</button>
-                        <button class="nudge-btn" data-val="-50">-50</button>
-                        
-                        <div class="nudge-display-box" id="nudgeDisplay">0ms</div>
-                        
-                        <button class="nudge-btn" data-val="50">+50</button>
-                        <button class="nudge-btn" data-val="100">+100</button>
+                <div class="state" id="state-playback">
+                    <div class="active-label">
+                        <span style="color:var(--text-main); font-weight:700;">ACTIVE.</span><br>
+                        Listen in Perfect Sync.
+                    </div>
+                    <div class="visual-waveform">📊</div>
+                    <button id="playBtn">▶️</button>
+                    <p class="text-description" id="trackNameDisplay">Audio plays in perfect sync<br>with the façade visuals.</p>
+                    
+                    <div class="slider-container">
+                        <div class="slider-row">
+                            <span>🔈</span>
+                            <input type="range" id="volumeBar" min="0" max="100" value="80">
+                            <span>🔊</span>
+                        </div>
+                    </div>
+
+                    <div class="slider-container" style="margin-top: 1.5rem;">
+                        <div class="slider-label">Hardware Nudge</div>
+                        <div class="nudge-controls">
+                            <button class="nudge-btn" data-val="-100">-100</button>
+                            <button class="nudge-btn" data-val="-50">-50</button>
+                            <div class="nudge-display-box" id="nudgeDisplay">0ms</div>
+                            <button class="nudge-btn" data-val="50">+50</button>
+                            <button class="nudge-btn" data-val="100">+100</button>
+                        </div>
                     </div>
                 </div>
 
-            </div>
-        </main>
+                <div id="state-creator">
+                    <div class="creator-section-title">Façade CMS Dashboard</div>
+                    
+                    <div class="form-group">
+                        <label>Track Identification Label</label>
+                        <input type="text" id="creatorTrackTitle" value="Labisi - Ife">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Audio Source File Allocation</label>
+                        <div class="file-upload-wrapper">
+                            <div class="upload-msg">📂 Drop track here or tap to choose file</div>
+                            <input type="file" id="creatorAudioSelector" accept="audio/*" onchange="processLocalCreatorTrack(event)">
+                            <div class="upload-status-badge" id="uploadStatusLabel">Asset staged locally.</div>
+                        </div>
+                    </div>
+
+                    <p class="sub-text" style="line-height: 1.4; color: var(--text-dim);">
+                        <strong>Sync Reference Warning:</strong> The server calculations tie runtime offsets to universal UTC midnight cycles. Ensure your media facade server loops are synchronized with the same standard.
+                    </p>
+                </div>
+
+            </main>
+        </div>
     </div>
 
     <script>
-        // HTML5 Audio Element (Reverted to streaming support)
+        // HTML5 Audio Element
         const audio = new Audio();
         audio.volume = 0.8;
         
@@ -227,6 +304,9 @@
         let serverOffset = 0;
         let isCalibrated = false;
         let manualNudge = 0; 
+
+        // Active Track Meta Info Container
+        let currentRuntimeTrackName = "Labisi - Ife";
 
         // UI STATE ELEMENTS
         const states = {
@@ -252,6 +332,47 @@
         function setUIState(newState) {
             Object.values(states).forEach(state => state.classList.remove('active'));
             states[newState].classList.add('active');
+        }
+
+        // ROLE SWITCHING MECHANISM
+        function switchSystemRole(role) {
+            const audBtn = document.getElementById('btnViewAudience');
+            const creBtn = document.getElementById('btnViewCreator');
+            const creatorScreen = document.getElementById('state-creator');
+            const indicatorText = document.getElementById('roleContextIndicator');
+
+            if (role === 'creator') {
+                audBtn.classList.remove('active');
+                creBtn.classList.add('active');
+                creatorScreen.classList.add('active');
+                indicatorText.textContent = "CMS / Upload Node";
+            } else {
+                creBtn.classList.remove('active');
+                audBtn.classList.add('active');
+                creatorScreen.classList.remove('active');
+                indicatorText.textContent = "Experience Journey";
+            }
+        }
+
+        // PROCESSING LOCAL CREATOR FILES
+        function processLocalCreatorTrack(event) {
+            const file = event.target.files[0];
+            const badge = document.getElementById('uploadStatusLabel');
+            if (!file) return;
+
+            // Generate an isolated internal system path for testing
+            const trackBlobUrl = URL.createObjectURL(file);
+            audio.src = trackBlobUrl;
+
+            // Extract values out of title container inputs
+            currentRuntimeTrackName = document.getElementById('creatorTrackTitle').value || file.name;
+            
+            badge.textContent = `✔ Active Source: ${file.name}`;
+            badge.style.display = "block";
+
+            // If the audio context was already running, pause it to realign parameters smoothly
+            audio.pause();
+            playBtn.textContent = '▶️';
         }
 
         // ==========================================
@@ -290,11 +411,9 @@
             }
         }
 
-        // Start calibration immediately on page load
         calibrateWithServer();
 
         function getPerfectSyncTime(durationSeconds) {
-            // Incorporate the manual nudge into the math
             const exactNow = Date.now() + serverOffset + manualNudge;
             const syncedDate = new Date(exactNow);
             const midnight = new Date(Date.UTC(syncedDate.getUTCFullYear(), syncedDate.getUTCMonth(), syncedDate.getUTCDate(), 0, 0, 0));
@@ -311,8 +430,10 @@
         const startDemoBtn = document.getElementById('startDemoBtn');
 
         startDemoBtn.addEventListener('click', function() {
-            // LOAD EXTERNAL STREAM URL
-            audio.src = "https://files.cvaultx.com/wp-content/uploads/music/2024/11/Labisi_-_Ife_CeeNaija.com_.mp3"; 
+            // Apply original fallback remote link if creator has not fed a custom audio blob
+            if (!audio.src) {
+                audio.src = "https://files.cvaultx.com/wp-content/uploads/music/2024/11/Labisi_-_Ife_CeeNaija.com_.mp3"; 
+            }
     
             // Safari Hack: Mute, Play, Pause, Unmute to force unlock
             audio.muted = true;
@@ -322,7 +443,7 @@
             }).catch(err => console.log("Audio unlock failed:", err));
 
             setUIState('syncing');
-            simulateSyncProcess("Labisi - Ife");
+            simulateSyncProcess(currentRuntimeTrackName);
         });
 
         // ==========================================
@@ -359,7 +480,6 @@
                 setUIState('playback');
                 trackNameDisplay.innerHTML = `${trackName}<br> Watch the projection.`;
                 
-                // Pre-load the exact jump time once metadata is ready
                 if (audio.duration) {
                     audio.currentTime = getPerfectSyncTime(audio.duration);
                 } else {
@@ -380,7 +500,6 @@
             playBtn.textContent = '⏸️';
         }
 
-        // Play/Pause button
         playBtn.addEventListener('click', () => {
             if (audio.paused) {
                 startSyncedPlayback();
@@ -390,12 +509,10 @@
             }
         });
 
-        // Seamless Loop
         audio.addEventListener('ended', () => {
             startSyncedPlayback();
         });
 
-        // Volume control
         volumeBar.addEventListener('input', () => {
             audio.volume = volumeBar.value / 100;
         });
@@ -413,30 +530,22 @@
                 nudgeDisplay.textContent = `${manualNudge > 0 ? '+' : ''}${manualNudge}ms`;
 
                 if (!audio.paused && audio.duration) {
-                    clearTimeout(nudgeTimeout); // Reset any ongoing bend if you click rapidly
+                    clearTimeout(nudgeTimeout); 
                     
-                    // 1. Calculate exactly where the audio SHOULD be right now
                     const targetTime = getPerfectSyncTime(audio.duration);
-                    
-                    // 2. Calculate the difference from where it ACTUALLY is
                     let diff = targetTime - audio.currentTime;
 
-                    // Handle the edge case if the track just looped
                     if (diff > audio.duration / 2) diff -= audio.duration;
                     if (diff < -audio.duration / 2) diff += audio.duration;
 
-                    // 3. Apply the Pitch Bend
                     if (Math.abs(diff) > 1.0) {
-                        // If it's way off (over 1 second), do a hard jump (buffering is inevitable)
                         audio.currentTime = targetTime;
                         audio.playbackRate = 1.0;
                     } else if (diff > 0.01) {
-                        // Audio is BEHIND. Speed up to 1.25x to catch up
                         audio.playbackRate = 1.25;
                         const bendDurationMs = (diff / 0.25) * 1000; 
                         nudgeTimeout = setTimeout(() => { audio.playbackRate = 1.0; }, bendDurationMs);
                     } else if (diff < -0.01) {
-                        // Audio is AHEAD. Slow down to 0.75x to let the visuals catch up
                         audio.playbackRate = 0.75;
                         const bendDurationMs = (Math.abs(diff) / 0.25) * 1000;
                         nudgeTimeout = setTimeout(() => { audio.playbackRate = 1.0; }, bendDurationMs);
@@ -444,7 +553,6 @@
                 }
             });
         });
-
     </script>
 </body>
 </html>
