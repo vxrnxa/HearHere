@@ -127,7 +127,19 @@
         .progress-bar-container { width: 100%; height: 6px; background: rgba(100, 116, 139, 0.2); border-radius: 3px; overflow: hidden; margin-top: 2rem; }
         #syncProgress { width: 0%; height: 100%; background: var(--btn-cyan); transition: width 0.1s linear; }
 
-        #state-playback .visual-waveform { font-size: 8rem; line-height: 1; color: var(--accent-green); }
+        .visual-waveform { 
+            width: 130px;
+            height: 130px;
+            margin: 1rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .visual-waveform img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
         .active-label { text-transform: uppercase; color: var(--text-dim); font-size: 0.8rem; margin: 1rem 0; line-height: 1.5; }
         #playBtn { font-size: 2.5rem; color: var(--text-main); background: none; border: none; cursor: pointer; margin: 1rem 0; }
         #playBtn:focus { outline: none; }
@@ -245,7 +257,9 @@
                         <span style="color:var(--text-main); font-weight:700;">ACTIVE.</span><br>
                         Listen in Perfect Sync.
                     </div>
-                    <div class="visual-waveform">📊</div>
+                    <div class="visual-waveform">
+                        <img src="https://i.postimg.co/N0gXgYg2/music-notes.gif" alt="Playing Audio Track Waves Animation"/>
+                    </div>
                     <button id="playBtn">▶️</button>
                     <p class="text-description" id="trackNameDisplay">Audio plays in perfect sync<br>with the façade visuals.</p>
                     
