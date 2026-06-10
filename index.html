@@ -31,7 +31,6 @@
             overflow-x: hidden;
         }
 
-        /* Mode Switcher for the Creator Panel */
         .mode-toggle-bar {
             margin-bottom: 10px;
             z-index: 10;
@@ -122,24 +121,47 @@
         .data-label { color: var(--accent-latency); }
         .data-value { color: var(--accent-green); text-transform: uppercase;}
 
-        .resync-btn { background: rgba(192, 132, 252, 0.2); color: var(--btn-pink); border: 1px solid rgba(192, 132, 252, 0.4); padding: 8px 15px; font-size: 0.7rem; border-radius: 5px; margin: 1rem 0; text-transform: uppercase; }
+        .resync-btn { background: rgba(192, 132, 252, 0.2); color: var(--btn-pink); border: 1px solid rgba(192, 132, 252, 0.4); padding: 8px 15px; font-size: 0.7rem; border-radius: 5px; margin: 1rem 0; text-transform: uppercase; cursor: pointer; }
 
         .progress-bar-container { width: 100%; height: 6px; background: rgba(100, 116, 139, 0.2); border-radius: 3px; overflow: hidden; margin-top: 2rem; }
         #syncProgress { width: 0%; height: 100%; background: var(--btn-cyan); transition: width 0.1s linear; }
 
+        /* ==========================================
+           NATIVE CSS WAVEFORM SYSTEM
+           ========================================== */
         .visual-waveform { 
-            width: 130px;
-            height: 130px;
-            margin: 1rem auto;
+            width: 160px;
+            height: 65px;
+            margin: 1.5rem auto;
             display: flex;
-            align-items: center;
+            align-items: flex-end;
             justify-content: center;
+            gap: 6px;
         }
-        .visual-waveform img {
-            width: 100%;
+        .visual-waveform .bar {
+            width: 8px;
             height: 100%;
-            object-fit: contain;
+            background: linear-gradient(to top, var(--btn-cyan), var(--btn-pink));
+            border-radius: 4px;
+            transform: scaleY(0.15);
+            transform-origin: bottom;
+            transition: transform 0.2s ease;
         }
+        /* Active State Driving the Animation Loop */
+        .visual-waveform.playing .bar {
+            animation: bounce 0.8s ease-in-out infinite alternate;
+        }
+        .visual-waveform .bar:nth-child(1) { animation-delay: 0.1s; }
+        .visual-waveform .bar:nth-child(2) { animation-delay: 0.4s; }
+        .visual-waveform .bar:nth-child(3) { animation-delay: 0.2s; }
+        .visual-waveform .bar:nth-child(4) { animation-delay: 0.5s; }
+        .visual-waveform .bar:nth-child(5) { animation-delay: 0.3s; }
+
+        @keyframes bounce {
+            0% { transform: scaleY(0.15); }
+            100% { transform: scaleY(1.0); }
+        }
+
         .active-label { text-transform: uppercase; color: var(--text-dim); font-size: 0.8rem; margin: 1rem 0; line-height: 1.5; }
         #playBtn { font-size: 2.5rem; color: var(--text-main); background: none; border: none; cursor: pointer; margin: 1rem 0; }
         #playBtn:focus { outline: none; }
@@ -182,9 +204,6 @@
             text-align: center;
         }
 
-        /* ==========================================
-           CREATOR PANEL STYLING
-           ========================================== */
         #state-creator {
             background-color: var(--creator-bg);
             position: absolute;
@@ -206,7 +225,6 @@
         .file-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
         .upload-msg { font-size: 0.85rem; color: var(--text-dim); }
         .upload-status-badge { font-size: 0.75rem; font-family: monospace; color: var(--accent-green); margin-top: 0.5rem; display: none; }
-
     </style>
 </head>
 <body>
@@ -242,7 +260,7 @@
                         <div class="timestamp" id="syncTime">00:00:00.000</div>
                     </div>
                     <p class="sync-label" id="loadingStatusText">Syncing to Server Clock...</p>
-                    <button class="resync-btn" onclick="calibrateWithServer()">Resync</button>
+                    <button class="resync-btn" onclick="triggerManualResync()">Resync</button>
                     <div class="sync-data">
                         <span class="data-label">Latency: <span id="latencyDisplay" style="color:var(--accent-green);">Calculating...</span></span>
                         <span class="data-value" id="finalSyncLabel"></span>
@@ -257,9 +275,15 @@
                         <span style="color:var(--text-main); font-weight:700;">ACTIVE.</span><br>
                         Listen in Perfect Sync.
                     </div>
-                    <div class="visual-waveform">
-                        <img src="https://i.postimg.co/N0gXgYg2/music-notes.gif" alt="Playing Audio Track Waves Animation"/>
+                    
+                    <div class="visual-waveform" id="waveformContainer">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
                     </div>
+
                     <button id="playBtn">▶️</button>
                     <p class="text-description" id="trackNameDisplay">Audio plays in perfect sync<br>with the façade visuals.</p>
                     
@@ -304,25 +328,22 @@
                         <strong>Sync Reference Warning:</strong> The server calculations tie runtime offsets to universal UTC midnight cycles. Ensure your media facade server loops are synchronized with the same standard.
                     </p>
                 </div>
-
             </main>
         </div>
     </div>
 
     <script>
-        // HTML5 Audio Element
         const audio = new Audio();
         audio.volume = 0.8;
         
-        // SERVER SYNC & NUDGE VARIABLES
         let serverOffset = 0;
         let isCalibrated = false;
         let manualNudge = 0; 
-
-        // Active Track Meta Info Container
         let currentRuntimeTrackName = "Labisi - Ife";
 
-        // UI STATE ELEMENTS
+        let timeIntervalInstance = null;
+        let progressIntervalInstance = null;
+
         const states = {
             landing: document.getElementById('state-landing'),
             syncing: document.getElementById('state-syncing'),
@@ -338,17 +359,15 @@
         const trackNameDisplay = document.getElementById('trackNameDisplay');
         const playBtn = document.getElementById('playBtn');
         const volumeBar = document.getElementById('volumeBar');
-        
-        // NUDGE ELEMENTS
         const nudgeDisplay = document.getElementById('nudgeDisplay');
         const nudgeBtns = document.querySelectorAll('.nudge-btn');
+        const waveformContainer = document.getElementById('waveformContainer');
 
         function setUIState(newState) {
             Object.values(states).forEach(state => state.classList.remove('active'));
             states[newState].classList.add('active');
         }
 
-       // SECURE ROLE SWITCHING MECHANISM
         async function switchSystemRole(role) {
             const audBtn = document.getElementById('btnViewAudience');
             const creBtn = document.getElementById('btnViewCreator');
@@ -356,30 +375,25 @@
             const indicatorText = document.getElementById('roleContextIndicator');
         
             if (role === 'creator') {
-                // 1. Prompt for Username
                 const username = prompt("Enter Administrator Username:");
                 if (username !== "hbk.saar") {
                     alert("Access Denied: Invalid Administrative Identity.");
                     return;
                 }
         
-                // 2. Prompt for Password
                 const password = prompt("Enter Administrative Password:");
                 if (!password) return;
         
-                // 3. Direct Plain-Text Password Check
                 if (password !== "FacadeLive2026!") {
                     alert("Access Denied: Security Signature Mismatch.");
                     return;
                 }
         
-                // Access Granted
                 audBtn.classList.remove('active');
                 creBtn.classList.add('active');
                 creatorScreen.classList.add('active');
                 indicatorText.textContent = "CMS / Upload Node";
             } else {
-                // Switching back to audience view doesn't require verification
                 creBtn.classList.remove('active');
                 audBtn.classList.add('active');
                 creatorScreen.classList.remove('active');
@@ -387,30 +401,24 @@
             }
         }
 
-        // PROCESSING LOCAL CREATOR FILES
         function processLocalCreatorTrack(event) {
             const file = event.target.files[0];
             const badge = document.getElementById('uploadStatusLabel');
             if (!file) return;
 
-            // Generate an isolated internal system path for testing
             const trackBlobUrl = URL.createObjectURL(file);
             audio.src = trackBlobUrl;
 
-            // Extract values out of title container inputs
             currentRuntimeTrackName = document.getElementById('creatorTrackTitle').value || file.name;
             
             badge.textContent = `✔ Active Source: ${file.name}`;
             badge.style.display = "block";
 
-            // If the audio context was already running, pause it to realign parameters smoothly
             audio.pause();
+            if(waveformContainer) waveformContainer.classList.remove('playing');
             playBtn.textContent = '▶️';
         }
 
-        // ==========================================
-        // PERFECT SYNC: MULTI-PING SERVER CALIBRATION
-        // ==========================================
         async function calibrateWithServer() {
             let bestOffset = 0;
             let lowestLatency = Infinity;
@@ -447,6 +455,7 @@
         calibrateWithServer();
 
         function getPerfectSyncTime(durationSeconds) {
+            if (!durationSeconds || isNaN(durationSeconds)) return 0;
             const exactNow = Date.now() + serverOffset + manualNudge;
             const syncedDate = new Date(exactNow);
             const midnight = new Date(Date.UTC(syncedDate.getUTCFullYear(), syncedDate.getUTCMonth(), syncedDate.getUTCDate(), 0, 0, 0));
@@ -457,18 +466,13 @@
             return (msElapsedToday % durationMs) / 1000;
         }
 
-        // ==========================================
-        // FLOW: LANDING -> SYNCING
-        // ==========================================
         const startDemoBtn = document.getElementById('startDemoBtn');
 
         startDemoBtn.addEventListener('click', function() {
-            // Apply original fallback remote link if creator has not fed a custom audio blob
             if (!audio.src) {
                 audio.src = "https://files.cvaultx.com/wp-content/uploads/music/2024/11/Labisi_-_Ife_CeeNaija.com_.mp3"; 
             }
     
-            // Safari Hack: Mute, Play, Pause, Unmute to force unlock
             audio.muted = true;
             audio.play().then(() => {
                 audio.pause();
@@ -479,24 +483,35 @@
             simulateSyncProcess(currentRuntimeTrackName);
         });
 
-        // ==========================================
-        // FLOW: SYNCING -> PLAYBACK
-        // ==========================================
+        function triggerManualResync() {
+            calibrateWithServer();
+            simulateSyncProcess(currentRuntimeTrackName);
+        }
+
         function simulateSyncProcess(trackName) {
+            clearInterval(timeIntervalInstance);
+            clearInterval(progressIntervalInstance);
+
+            syncProgress.style.width = `0%`;
+            syncStatusBtn.textContent = "Syncing...";
+            syncStatusBtn.style.background = "";
+            syncStatusBtn.classList.add('btn-sync');
+            finalSyncLabel.textContent = "";
+
             let progress = 0;
-            const timeInterval = setInterval(() => {
+            timeIntervalInstance = setInterval(() => {
                 const exactNow = Date.now() + serverOffset;
                 const now = new Date(exactNow);
                 syncTimeDisplay.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`;
             }, 20);
 
-            const progressInterval = setInterval(() => {
+            progressIntervalInstance = setInterval(() => {
                 progress += 2.5; 
                 syncProgress.style.width = `${progress}%`;
 
                 if (progress >= 100) {
-                    clearInterval(progressInterval);
-                    clearInterval(timeInterval);
+                    clearInterval(progressIntervalInstance);
+                    clearInterval(timeIntervalInstance);
                     onSyncComplete(trackName);
                 }
             }, 100);
@@ -513,7 +528,7 @@
                 setUIState('playback');
                 trackNameDisplay.innerHTML = `${trackName}<br> Watch the projection.`;
                 
-                if (audio.duration) {
+                if (!isNaN(audio.duration) && audio.duration > 0) {
                     audio.currentTime = getPerfectSyncTime(audio.duration);
                 } else {
                     audio.addEventListener('loadedmetadata', () => {
@@ -523,13 +538,13 @@
             }, 1500);
         }
 
-        // ==========================================
-        // PLAYBACK STATE LOGIC (HTML5 Audio)
-        // ==========================================
         function startSyncedPlayback() {
             const jumpTo = getPerfectSyncTime(audio.duration);
             audio.currentTime = jumpTo;
-            audio.play();
+            audio.play().catch(e => console.log("Playback blocked:", e));
+            
+            // Add native bounce style classes to visual container
+            if(waveformContainer) waveformContainer.classList.add('playing');
             playBtn.textContent = '⏸️';
         }
 
@@ -538,6 +553,7 @@
                 startSyncedPlayback();
             } else {
                 audio.pause();
+                if(waveformContainer) waveformContainer.classList.remove('playing');
                 playBtn.textContent = '▶️';
             }
         });
@@ -550,9 +566,6 @@
             audio.volume = volumeBar.value / 100;
         });
 
-        // ==========================================
-        // Nudge Button Logic - "DJ Pitch Bend"
-        // ==========================================
         let nudgeTimeout; 
 
         nudgeBtns.forEach(btn => {
@@ -562,7 +575,7 @@
                 
                 nudgeDisplay.textContent = `${manualNudge > 0 ? '+' : ''}${manualNudge}ms`;
 
-                if (!audio.paused && audio.duration) {
+                if (!audio.paused && !isNaN(audio.duration) && audio.duration > 0) {
                     clearTimeout(nudgeTimeout); 
                     
                     const targetTime = getPerfectSyncTime(audio.duration);
@@ -571,17 +584,21 @@
                     if (diff > audio.duration / 2) diff -= audio.duration;
                     if (diff < -audio.duration / 2) diff += audio.duration;
 
-                    if (Math.abs(diff) > 1.0) {
-                        audio.currentTime = targetTime;
-                        audio.playbackRate = 1.0;
-                    } else if (diff > 0.01) {
-                        audio.playbackRate = 1.25;
-                        const bendDurationMs = (diff / 0.25) * 1000; 
-                        nudgeTimeout = setTimeout(() => { audio.playbackRate = 1.0; }, bendDurationMs);
-                    } else if (diff < -0.01) {
-                        audio.playbackRate = 0.75;
-                        const bendDurationMs = (Math.abs(diff) / 0.25) * 1000;
-                        nudgeTimeout = setTimeout(() => { audio.playbackRate = 1.0; }, bendDurationMs);
+                    try {
+                        if (Math.abs(diff) > 1.0) {
+                            audio.currentTime = targetTime;
+                            audio.playbackRate = 1.0;
+                        } else if (diff > 0.01) {
+                            audio.playbackRate = 1.25;
+                            const bendDurationMs = (diff / 0.25) * 1000; 
+                            nudgeTimeout = setTimeout(() => { audio.playbackRate = 1.0; }, bendDurationMs);
+                        } else if (diff < -0.01) {
+                            audio.playbackRate = 0.75;
+                            const bendDurationMs = (Math.abs(diff) / 0.25) * 1000;
+                            nudgeTimeout = setTimeout(() => { audio.playbackRate = 1.0; }, bendDurationMs);
+                        }
+                    } catch (err) {
+                        console.warn("Playback rate adjustment rejected by browser engine:", err);
                     }
                 }
             });
