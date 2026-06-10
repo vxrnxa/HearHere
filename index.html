@@ -111,8 +111,6 @@
         .text-description { color: var(--text-dim); font-size: 0.85rem; line-height: 1.5; margin: 1.5rem 0; }
         .sub-text { color: var(--text-dimmer); font-size: 0.75rem; }
 
-        #state-landing .hand-graphic { font-size: 4rem; position: absolute; bottom: -30px; right: 0px; transform: rotate(-10deg); opacity: 0.8; color: var(--btn-cyan); pointer-events: none; }
-
         #state-syncing .visual-sphere { font-size: 10rem; line-height: 1; color: var(--text-main); margin: 1rem 0; position: relative; }
         #state-syncing .timestamp { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: monospace; font-size: 1rem; color: var(--text-main); font-weight: bold; }
         .sync-label { color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase; margin: 1rem 0 0.5rem 0; }
@@ -250,7 +248,6 @@
                     <button id="startDemoBtn" class="btn btn-sync">Tap to Listen</button>
                     <p class="text-description">"'Tap to Listen' button unlocks audio and syncs with server clock."</p>
                     <p class="sub-text">Scan complete. Connect state.</p>
-                    <div class="hand-graphic">👉</div>
                 </div>
 
                 <div class="state" id="state-syncing">
@@ -472,7 +469,7 @@
             if (!audio.src) {
                 audio.src = "https://files.cvaultx.com/wp-content/uploads/music/2024/11/Labisi_-_Ife_CeeNaija.com_.mp3"; 
             }
-    
+        
             audio.muted = true;
             audio.play().then(() => {
                 audio.pause();
