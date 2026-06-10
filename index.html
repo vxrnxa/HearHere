@@ -311,9 +311,7 @@
                         <label>Source File Allocation (Audio, Video, or Images)</label>
                         <div class="file-upload-wrapper">
                             <div class="upload-msg">📂 Drop media file here or tap to choose</div>
-                            
-                            <input type="file" id="creatorAudioSelector" accept=".mp3,audio/mpeg,audio/mp3,audio/*,video/*,image/*" onchange="processLocalCreatorTrack(event)">
-                            
+                            <input type="file" id="creatorAudioSelector" accept=".mp3,audio/mpeg,audio/mp3,audio/*" onchange="processLocalCreatorTrack(event)">
                             <div class="upload-status-badge" id="uploadStatusLabel">Asset broadcast active.</div>
                         </div>
                     </div>
@@ -340,6 +338,7 @@
 
         let activeServerTrackTitle = "Labisi - Ife";
         let activeServerAudioData = "https://files.cvaultx.com/wp-content/uploads/music/2024/11/Labisi_-_Ife_CeeNaija.com_.mp3";
+        let currentObjectUrl = null;
 
         let timeIntervalInstance = null;
         let progressIntervalInstance = null;
@@ -363,10 +362,25 @@
         const nudgeBtns = document.querySelectorAll('.nudge-btn');
         const waveformContainer = document.getElementById('waveformContainer');
 
-        if(!localStorage.getItem('hh_sync_title')) {
-            localStorage.setItem('hh_sync_title', activeServerTrackTitle);
-            localStorage.setItem('hh_sync_audio', activeServerAudioData);
-        }
+        // INDEXEDDB INTERFACE LAYER: Overcoming standard browser limits
+        let db = null;
+        const dbRequest = indexedDB.open("HearHereDatabase", 1);
+
+        dbRequest.onupgradeneeded = function(e) {
+            let database = e.target.result;
+            if (!database.objectStoreNames.contains("audioStore")) {
+                database.createObjectStore("audioStore", { keyPath: "id" });
+            }
+        };
+
+        dbRequest.onsuccess = function(e) {
+            db = e.target.result;
+            loadTrackingAssetsFromDatabase();
+        };
+
+        dbRequest.onerror = function(e) {
+            console.error("Database layer failed initialization:", e);
+        };
 
         function initWebAudioAPI() {
             if (!audioCtx) {
@@ -419,71 +433,96 @@
             }
         }
 
-        // UPDATED CREATOR BROADCAST SYSTEM: Safely intercepts browser quotas for local storage limits
+        // HIGH CAPACITY FILE INGESTION LOGIC
         function processLocalCreatorTrack(event) {
             const file = event.target.files[0];
             const badge = document.getElementById('uploadStatusLabel');
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Data = e.target.result;
-                const trackName = document.getElementById('creatorTrackTitle').value || file.name;
-                
-                try {
-                    localStorage.setItem('hh_sync_title', trackName);
-                    localStorage.setItem('hh_sync_audio', base64Data);
-                    
-                    badge.textContent = `✔ Broadcast Active: ${file.name}`;
-                    badge.style.color = "var(--accent-green)";
-                    badge.style.display = "block";
-                } catch (error) {
-                    // Critical catch handling storage overflows gracefully without stopping the presentation layer
-                    console.error("Local storage allocation error:", error);
-                    badge.innerHTML = `⚠️ File too large for local system context cache.<br>Simulating playback stream from memory node.`;
-                    badge.style.color = "#fbbf24";
-                    badge.style.display = "block";
-                    
-                    // Fallback to memory stream assignment
-                    activeServerTrackTitle = trackName;
-                    activeServerAudioData = base64Data;
-                    
-                    const isPlayingBeforeSwap = !audio.paused;
-                    audio.src = base64Data;
-                    trackNameDisplay.innerHTML = `${trackName}<br> Watch the projection.`;
-                    if (isPlayingBeforeSwap) {
-                        audio.addEventListener('loadedmetadata', () => { startSyncedPlayback(); }, { once: true });
-                    }
-                }
+            const trackName = document.getElementById('creatorTrackTitle').value || file.name;
+            
+            if (!db) {
+                alert("Database engine is busy. Try again in a moment.");
+                return;
+            }
+
+            const transaction = db.transaction(["audioStore"], "readwrite");
+            const store = transaction.objectStore("audioStore");
+            
+            // Saving raw file binary as a Blob without base64 conversion overhead
+            const record = {
+                id: "currentTrack",
+                title: trackName,
+                fileData: file,
+                timestamp: Date.now()
             };
-            reader.readAsDataURL(file); 
+
+            const putRequest = store.put(record);
+
+            putRequest.onsuccess = function() {
+                localStorage.setItem('hh_sync_title', trackName);
+                // Flag to trigger update sweep across windows
+                localStorage.setItem('hh_db_update_tick', Date.now()); 
+                
+                badge.textContent = `✔ High-Capacity Broadcast Active: ${file.name}`;
+                badge.style.color = "var(--accent-green)";
+                badge.style.display = "block";
+                
+                loadTrackingAssetsFromDatabase();
+            };
+
+            putRequest.onerror = function(e) {
+                console.error("IndexedDB Save Exception:", e);
+                badge.textContent = "❌ Internal structural save failure.";
+            };
         }
 
         function pushTextTitleUpdate(val) {
             localStorage.setItem('hh_sync_title', val);
+            localStorage.setItem('hh_db_update_tick', Date.now());
         }
 
-        setInterval(() => {
-            const currentGlobalTitle = localStorage.getItem('hh_sync_title');
-            const currentGlobalAudio = localStorage.getItem('hh_sync_audio');
+        function loadTrackingAssetsFromDatabase() {
+            if (!db) return;
 
-            if (currentGlobalTitle !== activeServerTrackTitle || currentGlobalAudio !== activeServerAudioData) {
-                activeServerTrackTitle = currentGlobalTitle;
-                activeServerAudioData = currentGlobalAudio;
+            const transaction = db.transaction(["audioStore"], "readonly");
+            const store = transaction.objectStore("audioStore");
+            const getRequest = store.get("currentTrack");
 
-                console.log("Global update intercepted! Syncing active data profiles...");
-                
-                const isPlayingBeforeSwap = !audio.paused;
-                audio.src = activeServerAudioData;
-                trackNameDisplay.innerHTML = `${activeServerTrackTitle}<br> Watch the projection.`;
-
-                if (isPlayingBeforeSwap) {
-                    audio.addEventListener('loadedmetadata', () => {
-                        startSyncedPlayback();
-                    }, { once: true });
+            getRequest.onsuccess = function(e) {
+                const record = e.target.result;
+                if (record) {
+                    activeServerTrackTitle = record.title;
+                    
+                    // Revoke older URL configurations to protect system working memory loops
+                    if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+                    
+                    currentObjectUrl = URL.createObjectURL(record.fileData);
+                    activeServerAudioData = currentObjectUrl;
+                    
+                    const isPlayingBeforeSwap = !audio.paused;
+                    audio.src = activeServerAudioData;
+                    trackNameDisplay.innerHTML = `${activeServerTrackTitle}<br> Watch the projection.`;
+                    
+                    if (isPlayingBeforeSwap) {
+                        audio.addEventListener('loadedmetadata', () => { startSyncedPlayback(); }, { once: true });
+                    }
+                } else {
+                    // Default fallback configuration context setups
+                    trackNameDisplay.innerHTML = `${activeServerTrackTitle}<br> Audio plays in perfect sync.`;
                 }
+            };
+        }
+
+        // Live monitor checks for multi-window synchronization signals
+        let lastKnownSyncTick = localStorage.getItem('hh_db_update_tick') || "0";
+        setInterval(() => {
+            const currentSyncTick = localStorage.getItem('hh_db_update_tick') || "0";
+            if (currentSyncTick !== lastKnownSyncTick) {
+                lastKnownSyncTick = currentSyncTick;
+                loadTrackingAssetsFromDatabase();
             }
-        }, 1000);
+        }, 800);
 
         async function calibrateWithServer() {
             let bestOffset = 0;
@@ -531,10 +570,7 @@
         startDemoBtn.addEventListener('click', function() {
             initWebAudioAPI();
 
-            activeServerTrackTitle = localStorage.getItem('hh_sync_title');
-            activeServerAudioData = localStorage.getItem('hh_sync_audio');
             audio.src = activeServerAudioData;
-
             audio.muted = true;
             audio.play().then(() => {
                 audio.pause();
