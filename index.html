@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HearHere- Live Prototype</title>
+    <title>HearHere - Live Prototype</title>
     <style>
         :root {
             --bg-page: #010118;
@@ -200,17 +200,17 @@
 <body>
 
     <div class="mode-toggle-bar">
-        <button class="mode-btn active" id="btnViewAudience" onclick="switchSystemRole('audience')">Audience App</button>
-        <button class="mode-btn" id="btnViewCreator" onclick="switchSystemRole('creator')">Creator CMS</button>
+        <button class="mode-btn active" id="btnViewAudience" onclick="switchSystemRole('audience')">Audience</button>
+        <button class="mode-btn" id="btnViewCreator" onclick="switchSystemRole('creator')">Creator</button>
     </div>
 
     <div class="wrapper">
         <div class="phone-mockup">
             <header>
-                <h1 class="main-title">Façade Experience UI</h1>
+                <h1 class="main-title">HearHere</h1>
                 <div class="experience-header">
                     <span class="circle-icon"></span>
-                    <span id="roleContextIndicator">Experience Journey</span>
+                    <span id="roleContextIndicator">HBK facade</span>
                 </div>
             </header>
 
@@ -369,7 +369,7 @@
                 creBtn.classList.remove('active');
                 audBtn.classList.add('active');
                 creatorScreen.classList.remove('active');
-                indicatorText.textContent = "Experience Journey";
+                indicatorText.textContent = "HBK facade";
             }
         }
 
