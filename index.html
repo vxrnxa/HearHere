@@ -124,9 +124,6 @@
         .progress-bar-container { width: 100%; height: 6px; background: rgba(100, 116, 139, 0.2); border-radius: 3px; overflow: hidden; margin-top: 2rem; }
         #syncProgress { width: 0%; height: 100%; background: var(--btn-cyan); transition: width 0.1s linear; }
 
-        /* ==========================================
-           NATIVE CSS WAVEFORM SYSTEM
-           ========================================== */
         .visual-waveform { 
             width: 160px;
             height: 65px;
@@ -145,7 +142,6 @@
             transform-origin: bottom;
             transition: transform 0.2s ease;
         }
-        /* Active State Driving the Animation Loop */
         .visual-waveform.playing .bar {
             animation: bounce 0.8s ease-in-out infinite alternate;
         }
@@ -164,13 +160,11 @@
         #playBtn { font-size: 2.5rem; color: var(--text-main); background: none; border: none; cursor: pointer; margin: 1rem 0; }
         #playBtn:focus { outline: none; }
     
-        /* Volume Control */
         .slider-container { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-top: 1rem; color: var(--text-dim); }
         .slider-row { display: flex; width: 100%; align-items: center; gap: 1rem; }
         .slider-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; }
         input[type="range"] { width: 100%; accent-color: var(--accent-green); cursor: pointer; }
 
-        /* Hardware Nudge Buttons */
         .nudge-controls { 
             display: flex; 
             align-items: center; 
@@ -222,7 +216,7 @@
         .file-upload-wrapper { background: #1e293b; border: 2px dashed var(--text-dimmer); border-radius: 10px; padding: 1.5rem; text-align: center; cursor: pointer; position: relative; }
         .file-upload-wrapper input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
         .upload-msg { font-size: 0.85rem; color: var(--text-dim); }
-        .upload-status-badge { font-size: 0.75rem; font-family: monospace; color: var(--accent-green); margin-top: 0.5rem; display: none; }
+        .upload-status-badge { font-size: 0.75rem; font-family: monospace; color: var(--accent-green); margin-top: 0.5rem; display: none; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -315,8 +309,8 @@
                     <div class="form-group">
                         <label>Audio Source File Allocation</label>
                         <div class="file-upload-wrapper">
-                            <div class="upload-msg">📂 Drop track here or tap to choose file</div>
-                            <input type="file" id="creatorAudioSelector" accept="audio/*" onchange="processLocalCreatorTrack(event)">
+                            <div class="upload-msg">📂 Drop MP3 audio here or tap to choose file</div>
+                            <input type="file" id="creatorAudioSelector" accept="audio/mp3, audio/*" onchange="processLocalCreatorTrack(event)">
                             <div class="upload-status-badge" id="uploadStatusLabel">Asset staged locally.</div>
                         </div>
                     </div>
@@ -337,6 +331,7 @@
         let isCalibrated = false;
         let manualNudge = 0; 
         let currentRuntimeTrackName = "Labisi - Ife";
+        let localAudioUrl = null;
 
         let timeIntervalInstance = null;
         let progressIntervalInstance = null;
@@ -403,14 +398,23 @@
             const badge = document.getElementById('uploadStatusLabel');
             if (!file) return;
 
-            const trackBlobUrl = URL.createObjectURL(file);
-            audio.src = trackBlobUrl;
+            // Revoke old object URL if it exists to free up browser memory
+            if (localAudioUrl) {
+                URL.revokeObjectURL(localAudioUrl);
+            }
 
+            // Create an optimal data stream link directly from client storage (handles any file size safely)
+            localAudioUrl = URL.createObjectURL(file);
+            audio.src = localAudioUrl;
+
+            // Compute file size in MB for UI clarity
+            const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
             currentRuntimeTrackName = document.getElementById('creatorTrackTitle').value || file.name;
             
-            badge.textContent = `✔ Active Source: ${file.name}`;
+            badge.innerHTML = `✔ Active MP3 Source:<br>${file.name} (${sizeInMB} MB)`;
             badge.style.display = "block";
 
+            // Enforce system reset to safely process the updated tracking track details
             audio.pause();
             if(waveformContainer) waveformContainer.classList.remove('playing');
             playBtn.textContent = '▶️';
@@ -540,7 +544,6 @@
             audio.currentTime = jumpTo;
             audio.play().catch(e => console.log("Playback blocked:", e));
             
-            // Add native bounce style classes to visual container
             if(waveformContainer) waveformContainer.classList.add('playing');
             playBtn.textContent = '⏸️';
         }
