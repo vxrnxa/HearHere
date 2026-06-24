@@ -403,9 +403,25 @@
                 URL.revokeObjectURL(localAudioUrl);
             }
 
-            // Create an optimal data stream link directly from client storage (handles any file size safely)
-            localAudioUrl = URL.createObjectURL(file);
-            audio.src = localAudioUrl;
+            const formData = new FormData();
+            formData.append("audio", file);
+            
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("Uploaded:", data);
+            
+                // IMPORTANT: use server file instead of local blob
+                audio.src = data.track.url;
+            
+                currentRuntimeTrackName = data.track.name;
+            
+                badge.innerHTML = `✔ Uploaded to Server:<br>${data.track.name}`;
+                badge.style.display = "block";
+            });
 
             // Compute file size in MB for UI clarity
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
