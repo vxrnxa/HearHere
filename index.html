@@ -394,47 +394,45 @@
         }
 
         function processLocalCreatorTrack(event) {
-            const file = event.target.files[0];
-            const badge = document.getElementById('uploadStatusLabel');
-            if (!file) return;
-
-            // Revoke old object URL if it exists to free up browser memory
-            if (localAudioUrl) {
-                URL.revokeObjectURL(localAudioUrl);
-            }
-
-            const formData = new FormData();
-            formData.append("audio", file);
-            
-            fetch("/upload", {
-                method: "POST",
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
-                console.log("Uploaded:", data);
-            
-                // IMPORTANT: use server file instead of local blob
-                audio.src = data.track.url;
-            
-                currentRuntimeTrackName = data.track.name;
-            
-                badge.innerHTML = `✔ Uploaded to Server:<br>${data.track.name}`;
-                badge.style.display = "block";
-            });
-
-            // Compute file size in MB for UI clarity
+        const file = event.target.files[0];
+        const badge = document.getElementById('uploadStatusLabel');
+        if (!file) return;
+    
+        // reset UI state immediately
+        audio.pause();
+        if (waveformContainer) waveformContainer.classList.remove('playing');
+        playBtn.textContent = '▶️';
+    
+        const formData = new FormData();
+        formData.append("audio", file);
+    
+        fetch("http://grp1.76-13-143-8.sslip.io/upload", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log("UPLOAD SUCCESS:", data);
+    
+            // IMPORTANT: server file becomes source
+            audio.src = "http://grp1.76-13-143-8.sslip.io" + data.track.url;
+    
+            currentRuntimeTrackName = data.track.name;
+    
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-            currentRuntimeTrackName = document.getElementById('creatorTrackTitle').value || file.name;
-            
-            badge.innerHTML = `✔ Active MP3 Source:<br>${file.name} (${sizeInMB} MB)`;
+    
+            badge.innerHTML =
+                `✔ Uploaded to Server:<br>` +
+                `${data.track.name} (${sizeInMB} MB)`;
+    
             badge.style.display = "block";
-
-            // Enforce system reset to safely process the updated tracking track details
-            audio.pause();
-            if(waveformContainer) waveformContainer.classList.remove('playing');
-            playBtn.textContent = '▶️';
-        }
+        })
+        .catch(err => {
+            console.error("UPLOAD FAILED:", err);
+            badge.innerHTML = "❌ Upload failed";
+            badge.style.display = "block";
+        });
+    }
 
         async function calibrateWithServer() {
             let bestOffset = 0;
