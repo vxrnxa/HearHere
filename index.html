@@ -337,8 +337,9 @@
         let progressIntervalInstance = null;
 
         // Security Configuration: Pre-calculated SHA-256 hash of "FacadeLive2026!"
-        const EXPECTED_USER_HASH = "81ff1fbd6dcf68dfa43fb633900995535df2b859966caee014cfb39fae680a31"; 
-        const EXPECTED_PASS_HASH = "bf639352e896cb09ca13f28328b9fb6b009f47055740fc92b45da85eb03e4ee4";
+        // Correct cryptographic signatures
+        const EXPECTED_USER_HASH = "59288596700cb74e5033c7063d85ee2cc55e81f57b6d519446002ae8e2ee53f3"; 
+        const EXPECTED_PASS_HASH = "9db71810f607fa668e1694f4a21074e50eb938b81db89e9f2913db2d80d2cf34";
 
         const states = {
             landing: document.getElementById('state-landing'),
