@@ -162,39 +162,7 @@
     
         .slider-container { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-top: 1rem; color: var(--text-dim); }
         .slider-row { display: flex; width: 100%; align-items: center; gap: 1rem; }
-        .slider-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; }
         input[type="range"] { width: 100%; accent-color: var(--accent-green); cursor: pointer; }
-
-        .nudge-controls { 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 0.5rem; 
-            width: 100%; 
-            margin-top: 0.5rem;
-        }
-        .nudge-btn { 
-            background: rgba(100, 116, 139, 0.2); 
-            color: var(--text-main); 
-            border: 1px solid var(--text-dimmer); 
-            border-radius: 5px; 
-            padding: 8px 12px; 
-            font-size: 0.8rem; 
-            font-weight: bold;
-            cursor: pointer; 
-            transition: all 0.1s;
-        }
-        .nudge-btn:active { 
-            transform: scale(0.92); 
-            background: rgba(34, 211, 238, 0.2); 
-            border-color: var(--btn-cyan);
-        }
-        .nudge-display-box {
-            color: var(--accent-green); 
-            font-weight: bold; 
-            width: 60px; 
-            text-align: center;
-        }
 
         #state-creator {
             background-color: var(--creator-bg);
@@ -285,17 +253,6 @@
                             <span>🔊</span>
                         </div>
                     </div>
-
-                    <div class="slider-container" style="margin-top: 1.5rem;">
-                        <div class="slider-label">Hardware Nudge</div>
-                        <div class="nudge-controls">
-                            <button class="nudge-btn" data-val="-100">-100</button>
-                            <button class="nudge-btn" data-val="-50">-50</button>
-                            <div class="nudge-display-box" id="nudgeDisplay">0ms</div>
-                            <button class="nudge-btn" data-val="50">+50</button>
-                            <button class="nudge-btn" data-val="100">+100</button>
-                        </div>
-                    </div>
                 </div>
 
                 <div id="state-creator">
@@ -329,7 +286,6 @@
         
         let serverOffset = 0;
         let isCalibrated = false;
-        let manualNudge = 0; 
         let currentRuntimeTrackName = "Labisi - Ife";
         let localAudioUrl = null;
 
@@ -351,8 +307,6 @@
         const trackNameDisplay = document.getElementById('trackNameDisplay');
         const playBtn = document.getElementById('playBtn');
         const volumeBar = document.getElementById('volumeBar');
-        const nudgeDisplay = document.getElementById('nudgeDisplay');
-        const nudgeBtns = document.querySelectorAll('.nudge-btn');
         const waveformContainer = document.getElementById('waveformContainer');
 
         function setUIState(newState) {
@@ -398,23 +352,19 @@
             const badge = document.getElementById('uploadStatusLabel');
             if (!file) return;
 
-            // Revoke old object URL if it exists to free up browser memory
             if (localAudioUrl) {
                 URL.revokeObjectURL(localAudioUrl);
             }
 
-            // Create an optimal data stream link directly from client storage (handles any file size safely)
             localAudioUrl = URL.createObjectURL(file);
             audio.src = localAudioUrl;
 
-            // Compute file size in MB for UI clarity
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
             currentRuntimeTrackName = document.getElementById('creatorTrackTitle').value || file.name;
             
             badge.innerHTML = `✔ Active MP3 Source:<br>${file.name} (${sizeInMB} MB)`;
             badge.style.display = "block";
 
-            // Enforce system reset to safely process the updated tracking track details
             audio.pause();
             if(waveformContainer) waveformContainer.classList.remove('playing');
             playBtn.textContent = '▶️';
@@ -457,7 +407,7 @@
 
         function getPerfectSyncTime(durationSeconds) {
             if (!durationSeconds || isNaN(durationSeconds)) return 0;
-            const exactNow = Date.now() + serverOffset + manualNudge;
+            const exactNow = Date.now() + serverOffset;
             const syncedDate = new Date(exactNow);
             const midnight = new Date(Date.UTC(syncedDate.getUTCFullYear(), syncedDate.getUTCMonth(), syncedDate.getUTCDate(), 0, 0, 0));
             
@@ -564,44 +514,6 @@
 
         volumeBar.addEventListener('input', () => {
             audio.volume = volumeBar.value / 100;
-        });
-
-        let nudgeTimeout; 
-
-        nudgeBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const change = parseInt(btn.getAttribute('data-val'));
-                manualNudge += change;
-                
-                nudgeDisplay.textContent = `${manualNudge > 0 ? '+' : ''}${manualNudge}ms`;
-
-                if (!audio.paused && !isNaN(audio.duration) && audio.duration > 0) {
-                    clearTimeout(nudgeTimeout); 
-                    
-                    const targetTime = getPerfectSyncTime(audio.duration);
-                    let diff = targetTime - audio.currentTime;
-
-                    if (diff > audio.duration / 2) diff -= audio.duration;
-                    if (diff < -audio.duration / 2) diff += audio.duration;
-
-                    try {
-                        if (Math.abs(diff) > 1.0) {
-                            audio.currentTime = targetTime;
-                            audio.playbackRate = 1.0;
-                        } else if (diff > 0.01) {
-                            audio.playbackRate = 1.25;
-                            const bendDurationMs = (diff / 0.25) * 1000; 
-                            nudgeTimeout = setTimeout(() => { audio.playbackRate = 1.0; }, bendDurationMs);
-                        } else if (diff < -0.01) {
-                            audio.playbackRate = 0.75;
-                            const bendDurationMs = (Math.abs(diff) / 0.25) * 1000;
-                            nudgeTimeout = setTimeout(() => { audio.playbackRate = 1.0; }, bendDurationMs);
-                        }
-                    } catch (err) {
-                        console.warn("Playback rate adjustment rejected by browser engine:", err);
-                    }
-                }
-            });
         });
     </script>
 </body>
