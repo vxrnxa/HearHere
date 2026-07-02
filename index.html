@@ -336,6 +336,10 @@
         let timeIntervalInstance = null;
         let progressIntervalInstance = null;
 
+        // Security Configuration: Pre-calculated SHA-256 hash of "FacadeLive2026!"
+        const EXPECTED_USER_HASH = "81ff1fbd6dcf68dfa43fb633900995535df2b859966caee014cfb39fae680a31"; 
+        const EXPECTED_PASS_HASH = "bf639352e896cb09ca13f28328b9fb6b009f47055740fc92b45da85eb03e4ee4";
+
         const states = {
             landing: document.getElementById('state-landing'),
             syncing: document.getElementById('state-syncing'),
@@ -360,6 +364,15 @@
             states[newState].classList.add('active');
         }
 
+        // Native secure SHA-256 calculation logic
+        async function computeSHA256(plaintext) {
+            if (!plaintext) return "";
+            const msgBuffer = new TextEncoder().encode(plaintext);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
         async function switchSystemRole(role) {
             const audBtn = document.getElementById('btnViewAudience');
             const creBtn = document.getElementById('btnViewCreator');
@@ -368,7 +381,10 @@
         
             if (role === 'creator') {
                 const username = prompt("Enter Administrator Username:");
-                if (username !== "hbk.saar") {
+                if (!username) return;
+                
+                const userHash = await computeSHA256(username.trim());
+                if (userHash !== EXPECTED_USER_HASH) {
                     alert("Access Denied: Invalid Administrative Identity.");
                     return;
                 }
@@ -376,7 +392,8 @@
                 const password = prompt("Enter Administrative Password:");
                 if (!password) return;
         
-                if (password !== "FacadeLive2026!") {
+                const passHash = await computeSHA256(password);
+                if (passHash !== EXPECTED_PASS_HASH) {
                     alert("Access Denied: Security Signature Mismatch.");
                     return;
                 }
@@ -398,23 +415,19 @@
             const badge = document.getElementById('uploadStatusLabel');
             if (!file) return;
 
-            // Revoke old object URL if it exists to free up browser memory
             if (localAudioUrl) {
                 URL.revokeObjectURL(localAudioUrl);
             }
 
-            // Create an optimal data stream link directly from client storage (handles any file size safely)
             localAudioUrl = URL.createObjectURL(file);
             audio.src = localAudioUrl;
 
-            // Compute file size in MB for UI clarity
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
             currentRuntimeTrackName = document.getElementById('creatorTrackTitle').value || file.name;
             
             badge.innerHTML = `✔ Active MP3 Source:<br>${file.name} (${sizeInMB} MB)`;
             badge.style.display = "block";
 
-            // Enforce system reset to safely process the updated tracking track details
             audio.pause();
             if(waveformContainer) waveformContainer.classList.remove('playing');
             playBtn.textContent = '▶️';
