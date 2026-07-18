@@ -31,4 +31,20 @@ This approach also allows visitors to join the experiene at any time, as the web
 
 Deployment
 
+How to install MadMapper:
+
+How to start running the server:
+
+-------------------------------------------------------------------------------------
+
+Using the System
+
+- Open web application in browser
+- Navigate to "Creator" interface
+- Upload the audio file(s)
+- Upload corresponding video into MadMapper
+- Press play on MadMapper and on the web page
+- Visitors scan the QR code and immediately hear synchronized audio
+No cloning of the repository is required for the creator once the server is running.
+
    
