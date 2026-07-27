@@ -35,6 +35,44 @@ How to install MadMapper:
 
 How to start running the server:
 
+To start the installation, navigate to the project folder in your terminal and run:
+
+sudo node server.js
+
+The server is explicitly configured to run on Port 80. This allows users to access the web interface simply by typing the server's IP address (e.g., http://192.168.1.50) without needing to append a port number. Binding to Port 80 requires administrator/root privileges on most operating systems.
+
+How to Use
+Once the server is running, make sure your devices are on the same network and open a browser to the server's IP address.
+
+1. Audience Mode (Default)
+Open the page and tap Tap to Listen.
+
+The device will automatically calculate network latency and sync to the server's master clock.
+
+Wait for the Creator to start the active queue!
+
+2. Creator Mode (CMS / Upload Node)
+Tap the Creator button at the top of the screen.
+
+Enter the administrative credentials:
+
+Username: hbk.saar
+
+Password: FacadeLive2026!
+
+Features:
+
+Upload: Drop MP3 or WAV files into the upload zone (supports chunked uploads for large files).
+
+Manage: Drag and drop to reorder the track library.
+
+Queue: Add or remove tracks from the live sequence.
+
+Broadcast: Hit Start Queue to trigger perfectly synchronized playback across all connected audience devices.
+
+Note on File Storage:
+The server handles its own file management. Upon the first run, it will automatically generate an /uploads directory for audio assets, as well as playlist.json and active-playlist.json files to remember your queue state even if the server restarts.
+
 -------------------------------------------------------------------------------------
 
 Using the System
