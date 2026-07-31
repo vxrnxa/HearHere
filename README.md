@@ -85,4 +85,95 @@ Using the System
 - Visitors scan the QR code and immediately hear synchronized audio
 No cloning of the repository is required for the creator once the server is running.
 
+
+
+
+
+
+
+
+
+
+
+# MadMapper Showcase Playlist Controller
+
+A Python-based absolute-time synchronization controller for MadMapper. This application ensures frame-accurate, synchronized video playback for live events and installations. By leveraging Network Time Protocol (NTP) and Open Sound Control (OSC), it allows you to schedule exact start times, queue countdowns, and instantly recover mid-show synchronization if a crash occurs.
+
+## Features
+
+* **Absolute Time Synchronization:** Bypasses local system clock drift by referencing atomic UTC time.
+* **Playlist Calculations:** Automatically calculates durations of multiple video files and tracks the continuous loop mathematically.
+* **Countdown Mode:** Queues your media and triggers playback at the exact scheduled second.
+* **Instant Mid-Show Resync:** If the system goes offline, restarting the app will calculate exactly where the video *should* be right now and jump MadMapper to that exact frame.
+
+---
+
+## Prerequisites
+
+Before running this application, ensure you have the following installed:
+
+* **Python 3.7+**
+* **MadMapper** (v4.0 or higher recommended)
+
+### Python Dependencies
+
+The script relies on a few external libraries. Open your terminal or command prompt and install them using `pip`:
+
+```bash
+pip install python-osc ntplib opencv-python
+
+```
+
+---
+
+## MadMapper Configuration
+
+Because this application operates as a "Sync-and-Release" controller, it triggers the correct starting point but relies on MadMapper to continue playback. **You must configure MadMapper exactly as follows:**
+
+### 1. Enable OSC Control
+
+1. Open MadMapper and go to **Preferences > OSC**.
+2. Check **Enable OSC Input**.
+3. Ensure the input port is set to **8010**.
+
+### 2. Configure the Media Playlist
+
+1. Load your video files into MadMapper's Media List in the **exact same order** you will load them into the Python app.
+2. Select all the videos in the list (except the last one).
+3. In the Media Properties panel, set **Action at end of media** to **Play Next Media**.
+4. Select the **last video** in the list, and set its **Action at end of media** to **Play First Media**. (This ensures the playlist loops infinitely).
+
+---
+
+## How to Use the Application
+
+1. **Launch the App:** Run the script from your terminal:
+```bash
+python madmapper_showcase_sync.py
+
+```
+
+
+2. **Load Your Media (Step 1):**
+* Click **Add Files...** and select the videos for your showcase.
+* **Crucial:** You must select and load them in the exact sequential order they are meant to play (matching your MadMapper list).
+* The app will automatically analyze the files and display the Total Loop Duration.
+
+
+3. **Set the Showcase Start Time (Step 2):**
+* Enter the official start date and time of the showcase in your local time zone.
+* Format: `YYYY-MM-DD` and `HH:MM:SS` (e.g., `2026-07-24` and `22:00:00`).
+
+
+4. **Initiate Sync:**
+* Click the large **▶ INITIATE SHOWCASE / RESYNC NOW** button.
+* **If before the start time:** The app will lock MadMapper's playhead to `0.0` on the first video and begin a live countdown. It will auto-play when the clock hits zero.
+* **If after the start time:** The app calculates how much time has passed, figures out which video should be playing, and instantly jumps MadMapper to the correct percentage of that specific clip.
+
+
+
+## Troubleshooting
+
+* **MadMapper isn't responding:** Double-check that OSC input is enabled on port `8010` in MadMapper. Ensure you are running both applications on the same computer (the script sends OSC to `127.0.0.1`).
+* **Videos are playing out of order:** Make sure the list in MadMapper perfectly matches the list loaded into the Python application, and that your "Action at end of media" settings are correctly configured to "Play Next Media".
    
